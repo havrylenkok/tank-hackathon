@@ -1,0 +1,141 @@
+@font-face {
+    font-family: 'Noto Sans';
+url('../fonts/NotoSans-Regular.ttf')  format('truetype'), /* Safari, Android, iOS */
+}
+
+body {
+    margin: 0;
+    font-family: 'Noto Sans', sans-serif;
+    background-color: #d7e7ba;
+    color: #4cc987;
+}
+h1 {
+    margin: 0;
+    text-align: center;
+    line-height: 1;
+    padding: 2rem;
+    font-weight: normal;
+    background-color: #4cc987;
+    color:#4A4A4A;
+}
+h2 {
+    margin: 0;
+    text-align: center;
+    line-height: 1;
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-weight: normal;
+    background-color: #7d7d7d;
+    color: #d7e7ba;
+}
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+table.current-table {
+    margin-bottom: 30vh;
+}
+thead {
+    background-color: #8c8c8c;
+    color: #d7e7ba;
+}
+thead th, tbody td {
+    padding: .5rem;
+    text-align: center;
+}
+thead th:first-child, tbody td:first-child {
+    text-align: center;
+}
+table {
+    width: 100%;
+}
+.authform{
+    width: 400px;
+    margin: 40px auto;
+    background-color: #7d7d7d;
+    /*padding: 40px;*/
+}
+.formLabelblock{
+    background-color: #4A4A4A;
+    color: #d7e7ba;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 24px;
+}
+.inputholder{
+    margin-top: 20px;
+    padding: 0 20px;
+}
+.inputholder label {
+    display: block;
+    padding-bottom: 6px;
+    color: #CECECE;
+    font-size: 14px;
+    font-weight: 100;
+}
+
+.inputholder input {
+    width: 100%;
+    height: 24px;
+    line-height: 24px;
+    font-size: 18px;
+    color: #000;
+}
+.inputholder select {
+    width: 47%;
+    background-color: white;
+    height: 30px;
+    line-height: 30px;
+    font-size: 18px;
+    color: #000;
+    /*margin-top: 10px;*/
+}
+.inputholder input.myBattleField {
+    width: 47%;
+    float: right;
+    vertical-align: bottom;
+    /*margin-top:10px;*/
+}
+.authform .authButton {
+    width: 80%;
+    text-align: center;
+    display: block;
+    margin: 0 auto;
+    background-color: #4cc987;
+    color: #D7E7BA;
+    border: none;
+    height: 48px;
+    margin-top: 10px;
+    cursor: pointer;
+    font-size: 23px;
+    text-transform: uppercase;
+    color: #fff;
+    border-bottom: 2px solid #5C5C5C;
+}
+.authButton:hover {
+    background-color: #51DA92;
+    color: #ffffcc;
+    border-bottom: 1px solid #6C6C6C;
+
+}
+.userBlock{
+    display: none;
+}
+.placeforUserNameBlock{
+    background-color: #8C8C8C;
+    padding: 5px;
+    color: #d7e7ba;
+}
+.placeforUserName{
+    display: inline-block;
+    background-color: #ccc;
+    padding: 5px 20px;
+    color: #000;
+}
+.placeForStatus{
+    padding-left: 10px;
+}
+.battleblock{
+    display: none;
+    width: 100%;
+}

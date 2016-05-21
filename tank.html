@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VesnaSoft JavaScript SDK</title>
+    <link rel="stylesheet" href="css/battlefield.css">
+    <script src="http://192.168.1.100:4000/static/a.js" async></script>
+    <script src="http://192.168.2.100:4000/static/b.js" async></script>
+</head>
+<body>
+<h1 class="headerH">VesnaSoft AI Battle</h1>
+
+
+<div id="divauth" class="authform">
+    <div class="formLabelblock">Открыть люк</div>
+    <div class="inputholder">
+        <label for="iaUsername">Позывной:</label>
+        <input id="iaUsername" placeholder="somename"><br/>
+    </div>
+    <div class="inputholder">
+        <label for="iaPassword">Пароль:</label>
+        <input id="iaPassword" placeholder="somepassword" type="password"><br/>
+    </div>
+    <div class="inputholder">
+        <label for="iaHostPort">Поле боя:</label>
+        <select name="servernam" id="iaHostPort">
+            <option value="" disabled selected></option>
+            <option value="4000">Диснейленд</option>
+            <option value="4100">Серега</option>
+            <option value="4200">Атлантида</option>
+            <option value="5000" >Колизей</option>
+        </select>
+        <input type="text" class="myBattleField" placeholder="Другое поле">
+    </div>
+    <br/>
+    <button id="bAuthorize" class="authButton">Принять управление</button>
+    <br>
+</div>
+
+<div class="userBlock">
+    <div class="placeforUserNameBlock">
+        <div class="placeforUserName"></div>
+        <span class="placeForStatus"></span>
+    </div>
+</div>
+<div class="battleblock"></div>
+<script src="assets/js/jquery.min.js"></script>
+<script src="assets/js/connection.js"></script>
+<script>
+    var w, h;
+    var serverHost, serverPort;
+    $("#bAuthorize").click(function doConnect() {
+        console.log(window.a, window.b);
+        if(window.a){
+            serverHost = '192.168.1.100';
+        }
+        else if ( window.b) {
+            serverHost = '192.168.2.100';
+        }
+        else {
+            alert('Что-то не так!');
+        }
+
+        var username = $("#iaUsername").val(), password = $("#iaPassword").val();
+        if (username == "" || password == "") {
+            alert("пустые поля не подчеркивают ваших достоинств.");
+            return;
+        }
+
+        var tankBodyColors = [
+            "1abc9c",
+            "2ecc71",
+            "3498db",
+            "9b59b6",
+            "16a085",
+            "27ae60",
+            "2980b9",
+            "8e44ad",
+            "f1c40f",
+            "e67e22",
+            "e74c3c",
+            "bdc3c7",
+            "f39c12"
+        ];
+
+        var tankColorNum = (username.hashCode() % tankBodyColors.length) < 0 ? -username.hashCode() % tankBodyColors.length : username.hashCode() % tankBodyColors.length;
+        var tankColor = tankBodyColors[tankColorNum];
+
+        $('.placeforUserName').css('background-color', '#'+tankColor).text(username);
+        $("#divauth").hide();
+        $('.placeForStatus').text('Подключение');
+        $('.userBlock').show();
+        serverPort = $('#iaHostPort').val();
+        console.log("коннектимся... login: " + username);
+        var serverName = $('.myBattleField').val().trim() == '' ? $('#iaHostPort').val() : $('.myBattleField').val();
+
+        // коннектимся
+        var socketPort = parseInt(serverPort)+ 1;
+        var ws = new WebSocket('ws://' + serverHost + ':' + socketPort );
+        var socket = wrapWebsocketConnection(ws, {debug: false});
+
+        // когда законнектимся...
+        socket.on("open", function () {
+            // ... то авторизируемся
+            $('.placeForStatus').text('Авторизация');
+            console.log("авторизуемся...");
+
+            socket.emit("Authorize", {
+                "user": username,
+                "pass": password,
+                "mode": "player"
+            });
+        });
+
+        socket.on("error", function (e) {
+            $('.placeForStatus').text('Проблемы с соединением попробуйте еще раз...');
+            console.log("у нас проблемы с соединением...", e);
+        });
+
+        socket.on("close", function () {
+            console.log("связь разорвана.");
+            $('.placeForStatus').text('Связь оборвана...');
+            setTimeout(doConnect, 1000);
+        });
+
+        var iframeAdded = false;
+        // иногда от сервера приходит новое состояние мира
+        socket.on("Map", function (world) {
+            if (ещёНеПолучалиКарту) {
+                $('.placeForStatus').text('Добро пожаловать на поле боя');
+                console.log("мы в игре!");
+                ещёНеПолучалиКарту = false;
+            }
+            // дать коду бота новое состояние
+            var input;
+            try {
+                input = f(world);
+            } catch (e) {
+                $('.placeForStatus').text('У вас ошибочка');
+                console.log("ошибка на вашей стороне..", e);
+            }
+
+            // бот решил как себя вести, надо сообщить об этом серверу
+            if (input) {
+                input["server-tick"] = world.tick;
+                input["move-xy"] = input["move-xy"] || [0, 0];
+                input["gun-xy"] = input["gun-xy"] || [0, 0];
+                input["fire"] = input["fire"] != undefined ? input["fire"] : false;
+                socket.emit("Input", input);
+            }
+
+            $('.placeForStatus').text('Вы на поле боя');
+
+            if(!iframeAdded){
+                iframeAdded = true;
+                var serverArray = serverName.split(':');
+                var port = parseInt(serverArray[1]) - 1;
+                serverName = 'http://'+ serverHost + ':' + serverPort +'/battlefield';
+                $('<iframe width="100%" id="battleIframe" src="' + serverName + '" scrolling="no" onload="resizeIframe(this)" frameborder="0" >').load(function(){
+                }).appendTo(".battleblock");
+                $('.headerH').slideUp();
+                $('#battleIframe').width(window.innerWidth-19)
+                if(window.innerWidth > 1560) {
+                    $('#battleIframe').height(window.innerHeight );
+                }
+                if(window.innerWidth < 1560) {
+                    $('#battleIframe').height(1400 );
+                }
+
+                $('.battleblock').show();
+
+                function resize() {
+                    windowSizeCalculating();
+                    var battleIframe = $('#battleIframe');
+                    battleIframe.width(window.innerWidth -19)
+                    battleIframe.height(h);
+                }
+
+                var ratio = window.innerHeight / window.innerWidth;
+                function windowSizeCalculating(){
+                    if (window.innerWidth / window.innerHeight >= ratio) {
+                        w = window.innerHeight * ratio;
+                        h = window.innerHeight;
+                    } else {
+                        w =  window.innerWidth;
+                        h =  wwindow.innerWidth *  ratio;
+                    }
+                }
+
+                window.onresize = resize;
+            }
+        });
+
+        var ещёНеПолучалиКарту = true;
+    });
+
+    Date.prototype.timeNow = function () {
+        return ((this.getHours() < 10) ? "0" : "") + this.getHours() + ":" + ((this.getMinutes() < 10) ? "0" : "") + this.getMinutes() + ":" + ((this.getSeconds() < 10) ? "0" : "") + this.getSeconds();
+    };
+
+    // логируем покрасивее
+    function log() {
+        for (var i = 0; i < arguments.length; i++) {
+            var l = $("#log");
+            var newp = $("<p>");
+            var time = i == 0 ? "[" + (new Date().timeNow()) + "] " : "";
+            var stringified = JSON.stringify(arguments[i]);
+            if (arguments[i].stack && arguments[i].message)
+                stringified = "ОШИБКА: " + arguments[i].message
+                        + " " + JSON.stringify(arguments[i].stack).replace(/\\n/g, "\n").replace(/file:[^:]+/g, "");
+            newp.text(time + stringified);
+            newp.html(newp.html().replace(/\n/g, "<br>\n"));
+            l.append(newp);
+        }
+    }
+
+    // восстанавливаем введенные ранее значения полей. Удобно.
+    // впрочем, теперь почти нет смысла рефрешать страницу
+    $(document).ready(function () {
+        if (localStorage.iaUsername) $("#iaUsername").val(localStorage.iaUsername);
+        if (localStorage.iaPassword) $("#iaPassword").val(localStorage.iaPassword);
+        if (localStorage.iaHostPort) $("#iaHostPort").val(localStorage.iaHostPort);
+        //noinspection JSUnresolvedFunction
+        $("#iaUsername, #iaPassword, #iaHostPort").change(saveAllInputs).keydown(saveAllInputs);
+    });
+
+    function saveAllInputs() {
+        localStorage.iaUsername = $("#iaUsername").val();
+        localStorage.iaPassword = $("#iaPassword").val();
+        localStorage.iaHostPort = $("#iaHostPort").val();
+    }
+
+    // единственный способ словить синтаксические ошибки подключаемого скрипта
+    var сообщатьОСинтаксическихОшибках = true;
+    window.onerror = function (e) {
+        if (e.indexOf && e.indexOf("Script error") >= 0 && сообщатьОСинтаксическихОшибках) {
+            console.log("у вас в скрипте синтаксические ошибки :(");
+            сообщатьОСинтаксическихОшибках = false;
+        }
+    };
+
+    // эта функция подключает новую версию скрипта управления ботом
+    var старыйСкриптТэг;
+    function подгрузитьНовуюВерсиюСкрипта(filename, onload) {
+        try {
+            if (старыйСкриптТэг)
+                try {
+                    document.getElementsByTagName("head")[0].removeChild(старыйСкриптТэг);
+                } catch (e) { /* не велика проблема */
+                }
+
+            var новыйСкриптТэг = document.createElement('script');
+            новыйСкриптТэг.setAttribute("type", "text/javascript");
+            новыйСкриптТэг.setAttribute("src", filename);
+            новыйСкриптТэг.onload = function () {
+                onload(новыйСкриптТэг);
+            };
+            новыйСкриптТэг.onerror = function (e) {
+                onload(новыйСкриптТэг, e);
+            };
+
+            if (typeof новыйСкриптТэг != "undefined")
+                document.getElementsByTagName("head")[0].appendChild(новыйСкриптТэг);
+
+        }
+        catch (eee) {
+            console.log("всё совсем плохо..", eee);
+        }
+    }
+
+    // тут мы будем периодически пытаться подключить новую версию скрипта управления ботом...
+    var старыйКод = "";
+    setInterval(function () {
+        подгрузитьНовуюВерсиюСкрипта("tank.js?" + Math.ceil(Date.now() / 1000), function (новыйСкриптТэг, проблемы) {
+            старыйСкриптТэг = новыйСкриптТэг;
+
+            if (проблемы)
+                return console.log(проблемы);
+
+            // у нас подгружена версия пользовательского кода? посмотрим...
+            if (window.commander) {
+                try {
+                    var кодНовойВерсии = commander.toString();
+                    if (кодНовойВерсии == старыйКод)
+                        return; // код не изменился, не интересно
+
+                    f = commander();
+                    console.log(старыйКод ? "подключили новую версию!" : "ваш код подключен!");
+                    сообщатьОСинтаксическихОшибках = true;
+                }
+                catch (e) {
+                    console.log("подключили новую версию, но она поломана! :(", e);
+                }
+
+                старыйКод = кодНовойВерсии;
+            }
+            else
+                console.log("подключилось что-то плохое, там должна быть функция commander");
+        });
+    }, 1000);
+
+    // функция-заглушка, нужна ли она? не знаю)
+    var f = function () {
+        return function () {
+            console.console.log("эмм...");
+        };
+    };
+
+    String.prototype.hashCode = function () {
+        var hash = 0,
+                i, chr, len;
+        if (this.length === 0) return hash;
+        for (i = 0, len = this.length; i < len; i++) {
+            chr = this.charCodeAt(i);
+            hash = ((hash << 5) - hash) + chr;
+            hash |= 0; // Convert to 32bit integer
+        }
+        return hash;
+    };
+
+    function resizeIframe(obj) {
+        obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';
+    }
+    function autoResize(id){
+        var newheight;
+        var newwidth;
+
+        if(document.getElementById){
+            newheight = document.getElementById(id).contentWindow.document .body.scrollHeight;
+            newwidth = document.getElementById(id).contentWindow.document .body.scrollWidth;
+        }
+
+        document.getElementById(id).height = (newheight) + "px";
+        document.getElementById(id).width = (newwidth) + "px";
+    }
+</script>
+
+</body>
+</html>
